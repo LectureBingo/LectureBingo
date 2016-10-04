@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * LectureBingo
+ * LectureBingo Server-side component
  */
 
 const fs = require('fs');
@@ -12,12 +12,8 @@ const io = require('socket.io')(server);
 const bodyParser = require('body-parser');
 
 const env = require('./env');
-let controlKey;
 const port = env.port;
-const backgrounds = env.backgrounds;
-
-const staticDir = __dirname + '/' + env.staticDir;
-const bowerDir = __dirname + '/' + 'bower_components/';
+let controlKey;
 
 let state = {
 	q: 0,
@@ -25,6 +21,13 @@ let state = {
 	v: 0,
 	s: 0
 };
+
+app.all('/control', (req, res, next) => {
+	res.header("Access-Control-Allow-Origin", '*');
+	res.header('Access-Control-Allow-Methods', 'POST');
+	res.header("Access-Control-Allow-Headers", "X-Requested-With, Content-Type");
+	next();
+});
 
 app.post('/control', bodyParser.json(), (req, res) => {
 	if (!controlKey && typeof req.body.key === 'string' && req.body.key.length > 5)
@@ -78,27 +81,19 @@ app.post('/control', bodyParser.json(), (req, res) => {
 		res.send('Reload event emitted');
 	}
 
-	else if (input === 'reloadParent') {
-		io.sockets.emit('reload', true);
-		res.send('Reload event emitted');
-	}
-
 	else if (input === 'bell') {
 		io.sockets.emit('bell');
 		res.send('Rung bell');
 	}
 
 	else
-		res.send('Commands: setall, add, get, usage, bell, reload, reloadParent');
+		res.send('Commands: setall, add, get, usage, bell, reload');
 });
 
-app.use('/', express.static(staticDir));
-app.use('/', express.static(bowerDir));
-
+io.set('origins', '*:*');
 
 io.on('connection', (socket) => {
 	socket.emit('state', state);
-	socket.emit('background', backgrounds[Math.floor(Math.random() * backgrounds.length)]);
 });
 
 server.listen(port);
