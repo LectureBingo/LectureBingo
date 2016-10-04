@@ -12,8 +12,9 @@ const io = require('socket.io')(server);
 const bodyParser = require('body-parser');
 
 const env = require('./env');
-const controlKey = env.controlKey;
+let controlKey;
 const port = env.port;
+const backgrounds = env.backgrounds;
 
 const staticDir = __dirname + '/' + env.staticDir;
 const bowerDir = __dirname + '/' + 'bower_components/';
@@ -26,6 +27,12 @@ let state = {
 };
 
 app.post('/control', bodyParser.json(), (req, res) => {
+	if (!controlKey && typeof req.body.key === 'string' && req.body.key.length > 5)
+		controlKey = req.body.key;
+
+	if (!controlKey)
+		return res.sendStatus(401);
+
 	if (req.body.key !== controlKey)
 		return res.sendStatus(401);
 
@@ -66,13 +73,23 @@ app.post('/control', bodyParser.json(), (req, res) => {
 	else if (input === 'get')
 		res.send(JSON.stringify(state, false, 4));
 
+	else if (input === 'reload') {
+		io.sockets.emit('reload', false);
+		res.send('Reload event emitted');
+	}
+
+	else if (input === 'reloadParent') {
+		io.sockets.emit('reload', true);
+		res.send('Reload event emitted');
+	}
+
 	else if (input === 'bell') {
 		io.sockets.emit('bell');
 		res.send('Rung bell');
 	}
 
 	else
-		res.send('Commands: setall, add, get, usage, bell');
+		res.send('Commands: setall, add, get, usage, bell, reload, reloadParent');
 });
 
 app.use('/', express.static(staticDir));
@@ -81,14 +98,7 @@ app.use('/', express.static(bowerDir));
 
 io.on('connection', (socket) => {
 	socket.emit('state', state);
-
-	fs.readdir(staticDir + 'backgrounds/', (err, files) => {
-		files = files.filter((file) => {
-			return file.endsWith('.jpg');
-		});
-
-		socket.emit('background', '/backgrounds/' + files[Math.floor(Math.random() * files.length)]);
-	});
+	socket.emit('background', backgrounds[Math.floor(Math.random() * backgrounds.length)]);
 });
 
 server.listen(port);

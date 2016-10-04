@@ -40,10 +40,10 @@
 		var state;
 
 		// Function that checks whether a state has a bingo
-		function isBingo (state) {
-			return (state.q % 5 === 0 && state.q > 0) ||
-				(state.c % 5 === 0 && state.c > 0) ||
-				(state.v % 5 === 0 && state.v > 0);
+		function isBingo (newState, state) {
+			return (newState.q % 5 === 0 && newState.q > 0 && state.q % 5 !== 0) ||
+				(newState.c % 5 === 0 && newState.c > 0 && state.c % 5 !== 0) ||
+				(newState.v % 5 === 0 && newState.v > 0 && state.v % 5 !== 0);
 		};
 
 		// Shows the state in the DOM
@@ -70,7 +70,7 @@
 		socket.on('state', function (newState) {
 			// If the state variable is not empty, and the new state has a bingo,
 			// ring the bell!
-			if (state && isBingo(newState)) {
+			if (state && isBingo(newState, state)) {
 				bell.currentTime = 0.1;
 				bell.play();
 			}
@@ -79,6 +79,15 @@
 
 			representState()
 		});
+
+		socket.on('reload', function (parent) {
+			if (parent) {
+				parent.location.reload();
+			}
+			else {
+				location.reload();
+			}
+		})
 
 		// The admin reset the state to some values, don't check for bingo
 		socket.on('reset state', function (newState) {
