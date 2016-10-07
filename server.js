@@ -12,8 +12,12 @@ const io = require('socket.io')(server);
 const bodyParser = require('body-parser');
 
 const env = require('./env');
-const port = env.port;
 let controlKey;
+
+fs.readFile(__dirname + '/' + env.controlKeyFile, 'utf8', (err, data) => {
+	if (!err)
+		controlKey = data;
+});
 
 let state = {
 	q: 0,
@@ -30,8 +34,10 @@ app.all('/control', (req, res, next) => {
 });
 
 app.post('/control', bodyParser.json(), (req, res) => {
-	if (!controlKey && typeof req.body.key === 'string' && req.body.key.length > 5)
+	if (!controlKey && typeof req.body.key === 'string' && req.body.key.length > 5) {
 		controlKey = req.body.key;
+		fs.writeFile(__dirname + '/' + env.controlKeyFile, controlKey, (err) => {});
+	}
 
 	if (!controlKey)
 		return res.sendStatus(401);
@@ -96,4 +102,4 @@ io.on('connection', (socket) => {
 	socket.emit('state', state);
 });
 
-server.listen(port);
+server.listen(env.port, env.ip);
