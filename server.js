@@ -14,6 +14,8 @@ const bodyParser = require('body-parser');
 const env = require('./env');
 let controlKey;
 
+let connectionsCount = 0;
+
 fs.readFile(__dirname + '/' + env.controlKeyFile, 'utf8', (err, data) => {
 	if (!err)
 		controlKey = data;
@@ -92,6 +94,9 @@ app.post('/control', bodyParser.json(), (req, res) => {
 		res.send('Rung bell');
 	}
 
+	else if (input === 'stats')
+		res.send('Connected client count: ' + connectionsCount);
+
 	else
 		res.send('Commands: setall, add, get, usage, bell, reload');
 });
@@ -99,7 +104,13 @@ app.post('/control', bodyParser.json(), (req, res) => {
 io.set('origins', '*:*');
 
 io.on('connection', (socket) => {
+	connectionsCount ++;
+
 	socket.emit('state', state);
+
+	socket.on('disconnect', () => {
+		connectionsCount --;
+	});
 });
 
 server.listen(env.port, env.ip);
